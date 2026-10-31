@@ -41,10 +41,19 @@ interview-ready.
 - Added numeric imputation, categorical imputation, and one-hot encoding
 - Added focused preprocessing tests
 
+### Implemented in Milestone 4
+
+- Added a reproducible Logistic Regression training workflow at
+  [`src/train.py`](src/train.py)
+- Added stratified train/test splitting and a majority-class baseline
+- Added accuracy, precision, recall, F1-score, ROC-AUC, confusion matrix, and
+  classification report evaluation
+- Saved the complete fitted preprocessing and model pipeline to
+  `models/churn_pipeline.joblib`
+- Added focused training and model persistence tests
+
 ### Planned for later milestones
 
-- Clean and preprocess the data
-- Train and evaluate a Logistic Regression baseline
 - Compare suitable machine learning models
 - Build a reusable prediction pipeline
 - Add interactive analytics and individual customer predictions
@@ -135,10 +144,12 @@ The `customerID` identifier is removed from the features because it is not a
 meaningful measurement. `SeniorCitizen` is stored as integer `0`/`1` in the
 dataset, so it is treated as a numeric feature.
 
-The preprocessing transformer uses median imputation for numeric columns. It
-uses most-frequent imputation followed by one-hot encoding for categorical
-columns, with `handle_unknown="ignore"` so new category values do not break
-later transformations.
+The preprocessing transformer uses median imputation followed by standard
+scaling for numeric columns. Scaling puts numeric features on comparable
+ranges, which helps Logistic Regression converge. It uses most-frequent
+imputation followed by one-hot encoding for categorical columns, with
+`handle_unknown="ignore"` so new category values do not break later
+transformations.
 
 The transformer must be fitted on training features only:
 
@@ -167,3 +178,40 @@ Run the focused tests:
 ```powershell
 python -m pytest -q
 ```
+
+## Milestone 4: Training and evaluation
+
+Run the complete baseline training workflow from the project root:
+
+```powershell
+python src\train.py
+```
+
+The workflow separates features and the `Churn` target, then uses
+`train_test_split` with `test_size=0.2`, `random_state=42`, and
+`stratify=y`. Stratification keeps the churn proportion similar in both
+splits, which is important because only about one quarter of customers churn.
+
+The Logistic Regression classifier is inside the same scikit-learn pipeline as
+the preprocessing transformer. The transformer is built from training columns
+and fitted only when the pipeline is fitted on training rows. This prevents
+test-set information from influencing imputation statistics or one-hot
+encoding.
+
+The workflow also reports a majority-class baseline that predicts the most
+common training label for every test customer. This baseline can have
+reasonable accuracy while failing to identify churners, so recall, precision,
+F1-score, and ROC-AUC provide additional context.
+
+Metrics are calculated with churn (`1`) as the positive class. The confusion
+matrix is printed in the order:
+
+```text
+[[true negative, false positive],
+ [false negative, true positive]]
+```
+
+The fitted pipeline, including preprocessing and Logistic Regression, is saved
+to `models/churn_pipeline.joblib` and reloaded to verify that it can predict.
+Model comparison and prediction dashboard features are planned for later
+milestones.

@@ -7,7 +7,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "Telco-Customer-Churn.csv"
@@ -82,7 +82,10 @@ def build_preprocessor(features: pd.DataFrame) -> ColumnTransformer:
     numeric_columns, categorical_columns = identify_feature_types(features)
 
     numeric_pipeline = Pipeline(
-        steps=[("imputer", SimpleImputer(strategy="median"))]
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
     )
     categorical_pipeline = Pipeline(
         steps=[
