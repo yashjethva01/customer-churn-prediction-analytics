@@ -33,6 +33,14 @@ interview-ready.
 - Added a reusable EDA script at [`src/eda.py`](src/eda.py)
 - Computed churn, customer-category, tenure, and numeric-feature summaries
 
+### Implemented in Milestone 3
+
+- Added a reusable preprocessing module at [`src/preprocessing.py`](src/preprocessing.py)
+- Converted whitespace-only `TotalCharges` values to numeric missing values
+- Separated the `Churn` target from model features and removed `customerID`
+- Added numeric imputation, categorical imputation, and one-hot encoding
+- Added focused preprocessing tests
+
 ### Planned for later milestones
 
 - Clean and preprocess the data
@@ -114,5 +122,48 @@ python src\eda.py
 ```
 
 The raw CSV remains local and is excluded by `.gitignore`. Dataset analysis is
-implemented, but machine learning and predictive preprocessing are not
-implemented yet.
+and reusable preprocessing are implemented, but no model has been trained yet.
+
+## Preprocessing
+
+`src/preprocessing.py` validates the CSV structure and converts `TotalCharges`
+with `pd.to_numeric`. The 11 whitespace-only values become missing numeric
+values; they are not replaced with zero and their rows are preserved.
+
+`Churn` is the target and is mapped to binary values: `Yes = 1` and `No = 0`.
+The `customerID` identifier is removed from the features because it is not a
+meaningful measurement. `SeniorCitizen` is stored as integer `0`/`1` in the
+dataset, so it is treated as a numeric feature.
+
+The preprocessing transformer uses median imputation for numeric columns. It
+uses most-frequent imputation followed by one-hot encoding for categorical
+columns, with `handle_unknown="ignore"` so new category values do not break
+later transformations.
+
+The transformer must be fitted on training features only:
+
+```python
+from src.preprocessing import build_preprocessor, load_dataset, split_features_target
+
+data = load_dataset()
+features, target = split_features_target(data)
+preprocessor = build_preprocessor(features)
+preprocessor.fit(training_features)
+training_matrix = preprocessor.transform(training_features)
+test_matrix = preprocessor.transform(test_features)
+```
+
+Fitting only on training data prevents information from the test set from
+influencing imputation statistics or the learned category vocabulary.
+
+Run the preprocessing demonstration:
+
+```powershell
+python src\preprocessing.py
+```
+
+Run the focused tests:
+
+```powershell
+python -m pytest -q
+```
