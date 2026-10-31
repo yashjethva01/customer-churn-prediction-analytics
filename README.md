@@ -52,9 +52,16 @@ interview-ready.
   `models/churn_pipeline.joblib`
 - Added focused training and model persistence tests
 
+### Implemented in Milestone 5
+
+- Added Logistic Regression, Decision Tree, and Random Forest comparison
+- Reused one stratified 80/20 split for every model
+- Added F1-based provisional model selection with ROC-AUC and recall tie-breakers
+- Added tree-based feature-importance summaries
+- Saved the selected pipeline and measured comparison summary locally
+
 ### Planned for later milestones
 
-- Compare suitable machine learning models
 - Build a reusable prediction pipeline
 - Add interactive analytics and individual customer predictions
 - Add batch predictions, model explanations, automated tests, and deployment
@@ -130,8 +137,8 @@ To run the Milestone 2 exploratory analysis:
 python src\eda.py
 ```
 
-The raw CSV remains local and is excluded by `.gitignore`. Dataset analysis is
-and reusable preprocessing are implemented, but no model has been trained yet.
+The raw CSV remains local and is excluded by `.gitignore`. Dataset analysis,
+reusable preprocessing, model training, and model comparison are implemented.
 
 ## Preprocessing
 
@@ -215,3 +222,43 @@ The fitted pipeline, including preprocessing and Logistic Regression, is saved
 to `models/churn_pipeline.joblib` and reloaded to verify that it can predict.
 Model comparison and prediction dashboard features are planned for later
 milestones.
+
+## Milestone 5: Model comparison and selection
+
+Run the comparison from the project root:
+
+```powershell
+.venv\Scripts\python.exe src\compare_models.py
+```
+
+The workflow compares Logistic Regression, a modest Decision Tree, and a
+Random Forest. All three use the same stratified 80/20 split with
+`random_state=42`, and each model has its own pipeline so preprocessing is
+fitted only on its training rows.
+
+The primary selection metric is churn-class F1-score. ROC-AUC is the first
+tie-breaker, followed by recall. This is a provisional educational comparison:
+the held-out test set is used to compare candidates in this milestone, so a
+production workflow should select and tune models using validation data or
+cross-validation on the training set before one final evaluation on untouched
+test data.
+
+The comparison reports accuracy, churn precision, churn recall, F1-score,
+ROC-AUC, confusion matrices, and classification reports. The majority-class
+accuracy remains available as context because accuracy alone can hide poor
+churn detection when classes are imbalanced.
+
+Decision Tree and Random Forest feature-importance summaries use transformed
+feature names and show the top 10 impurity-based importances. These indicate
+how the fitted trees used features; they do not prove that a feature causes
+churn.
+
+The selected pipeline is saved locally to
+`models/best_churn_pipeline.joblib`. Measured comparison metadata is saved to
+`models/model_comparison_summary.json`. Both files are ignored by Git.
+
+Run all tests:
+
+```powershell
+.venv\Scripts\python.exe -m pytest -q
+```
