@@ -1,6 +1,7 @@
 """Prediction helpers for the Streamlit customer form."""
 
 from pathlib import Path
+import pickle
 
 import joblib
 import pandas as pd
@@ -27,7 +28,17 @@ def load_compatible_model() -> tuple[Pipeline, str]:
             if "customerID" in feature_names or "Churn" in feature_names:
                 raise ValueError("artifact expects an identifier or target as an input")
             return model, f"{label} ({path.name})"
-        except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
+        except (
+            AttributeError,
+            EOFError,
+            ImportError,
+            KeyError,
+            ModuleNotFoundError,
+            OSError,
+            pickle.UnpicklingError,
+            TypeError,
+            ValueError,
+        ) as error:
             errors.append(f"{path.name}: {error}")
     raise FileNotFoundError(
         "No compatible churn model artifact was found. Run "

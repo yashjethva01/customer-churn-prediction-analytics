@@ -43,7 +43,7 @@ def churn_rate_by(data: pd.DataFrame, column: str) -> pd.DataFrame:
     if data.empty:
         return pd.DataFrame(columns=[column, "customers", "churn_rate_percent"])
     result = (
-        data.groupby(column, as_index=False)
+        data.groupby(column, as_index=False, observed=True)
         .agg(
             customers=("Churn", "size"),
             churned=("Churn", lambda values: values.eq("Yes").sum()),
