@@ -62,8 +62,6 @@ interview-ready.
 
 ### Planned for later milestones
 
-- Build a reusable prediction pipeline
-- Add interactive analytics and individual customer predictions
 - Add batch predictions, model explanations, automated tests, and deployment
   documentation
 
@@ -262,3 +260,30 @@ Run all tests:
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
 ```
+
+## Milestone 6: Interactive dashboard
+
+The Streamlit dashboard in `app.py` provides:
+
+- Historical analytics KPIs and interactive filters for contract, internet
+  service, payment method, and tenure.
+- Plotly charts for churn counts, group churn rates, tenure, payment method,
+  internet service, and monthly charges.
+- A customer input form that builds the exact feature schema expected by the
+  selected fitted pipeline.
+- Model artifact information and clear handling when artifacts are missing or
+  incompatible.
+
+The preferred artifact is `models/best_churn_pipeline.joblib`; the dashboard
+falls back to `models/churn_pipeline.joblib` if necessary. It does not retrain
+models during application startup or prediction requests.
+
+Install dependencies and launch from the project root:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+Predicted probabilities are estimates from historical data, not guarantees,
+causal explanations, or calibrated business risk scores.
