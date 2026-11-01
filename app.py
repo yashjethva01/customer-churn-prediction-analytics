@@ -12,6 +12,22 @@ from src.dashboard_data import (
 from src.predict import load_compatible_model, predict_customer
 
 
+COLUMN_LABELS = {
+    "status": "Churn status",
+    "customers": "Customers",
+    "gender": "Gender",
+    "SeniorCitizen": "Senior citizen",
+    "tenure": "Tenure (months)",
+    "Contract": "Contract type",
+    "InternetService": "Internet service",
+    "PaymentMethod": "Payment method",
+    "tenure_group": "Tenure group",
+    "MonthlyCharges": "Monthly charges ($)",
+    "Churn": "Churn status",
+    "churn_rate_percent": "Churn rate (%)",
+}
+
+
 st.set_page_config(
     page_title="Customer Churn Analytics",
     page_icon="📊",
@@ -54,6 +70,7 @@ def render_analytics(data: pd.DataFrame) -> None:
 
     filtered = filter_customers(data, contracts, internet, payments, tenure)
     kpis = calculate_kpis(filtered)
+    st.subheader("Overview")
     columns = st.columns(4)
     columns[0].metric("Customers", f"{kpis['total_customers']:,}")
     columns[1].metric("Churned", f"{kpis['churned_customers']:,}")
@@ -64,6 +81,8 @@ def render_analytics(data: pd.DataFrame) -> None:
         st.warning("No customers match the selected filters. Adjust the sidebar filters.")
         return
 
+    st.caption(f"Showing {len(filtered):,} customers after filtering.")
+    st.divider()
     left, right = st.columns(2)
     churn_counts = (
         filtered["Churn"]
@@ -77,6 +96,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="status",
             y="customers",
             title="Customers by churn status",
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -87,7 +107,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="Contract",
             y="churn_rate_percent",
             title="Churn rate by contract",
-            labels={"churn_rate_percent": "Churn rate (%)"},
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -101,7 +121,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="tenure_group",
             y="churn_rate_percent",
             title="Churn rate by tenure group",
-            labels={"churn_rate_percent": "Churn rate (%)"},
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -112,7 +132,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="PaymentMethod",
             y="churn_rate_percent",
             title="Churn rate by payment method",
-            labels={"churn_rate_percent": "Churn rate (%)"},
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -125,7 +145,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="InternetService",
             y="churn_rate_percent",
             title="Churn rate by internet service",
-            labels={"churn_rate_percent": "Churn rate (%)"},
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -135,7 +155,7 @@ def render_analytics(data: pd.DataFrame) -> None:
             x="Churn",
             y="MonthlyCharges",
             title="Monthly charges by churn status",
-            labels={"MonthlyCharges": "Monthly charges"},
+            labels={"Churn": "Churn status", "MonthlyCharges": "Monthly charges ($)"},
         ),
         use_container_width=True,
     )
@@ -155,7 +175,9 @@ def render_analytics(data: pd.DataFrame) -> None:
             if column in filtered.columns
         ]
         st.dataframe(
-            filtered[preview_columns].head(100),
+            filtered[preview_columns]
+            .head(100)
+            .rename(columns={column: COLUMN_LABELS.get(column, column) for column in preview_columns}),
             use_container_width=True,
             hide_index=True,
         )
@@ -169,12 +191,18 @@ def render_prediction(data: pd.DataFrame) -> None:
         st.error(str(error))
         return
 
-    st.info(f"Using: {model_label}. Predictions use the fitted historical pipeline.")
+    st.info(
+        f"Using {model_label}. Predictions use the fitted historical pipeline."
+    )
+    st.caption(
+        "Enter a customer profile to estimate churn risk from historical patterns."
+    )
     feature_names = list(model.named_steps["preprocessor"].feature_names_in_)
     values: dict[str, object] = {}
     with st.form("prediction_form"):
         profile, service, billing = st.columns(3)
         with profile:
+            st.subheader("Customer Details")
             values["gender"] = (
                 st.selectbox("Gender", sorted(data["gender"].dropna().unique()))
                 if "gender" in feature_names
@@ -198,11 +226,18 @@ def render_prediction(data: pd.DataFrame) -> None:
                 else None
             )
             values["tenure"] = (
-                st.slider("Tenure (months)", 0, int(data["tenure"].max()), 12)
+                st.slider(
+                    "Tenure (months)",
+                    0,
+                    int(data["tenure"].max()),
+                    12,
+                    help="Approximate number of months the customer has stayed.",
+                )
                 if "tenure" in feature_names
                 else None
             )
         with service:
+            st.subheader("Services")
             service_columns = [
                 "PhoneService",
                 "MultipleLines",
@@ -214,12 +249,25 @@ def render_prediction(data: pd.DataFrame) -> None:
                 "StreamingTV",
                 "StreamingMovies",
             ]
+            service_labels = {
+                "PhoneService": "Phone service",
+                "MultipleLines": "Multiple lines",
+                "InternetService": "Internet service",
+                "OnlineSecurity": "Online security",
+                "OnlineBackup": "Online backup",
+                "DeviceProtection": "Device protection",
+                "TechSupport": "Technical support",
+                "StreamingTV": "Streaming TV",
+                "StreamingMovies": "Streaming movies",
+            }
             for name in service_columns:
                 if name in feature_names:
                     values[name] = st.selectbox(
-                        name, sorted(data[name].dropna().unique())
+                        service_labels[name],
+                        sorted(data[name].dropna().unique()),
                     )
         with billing:
+            st.subheader("Billing Details")
             values["Contract"] = (
                 st.selectbox("Contract", sorted(data["Contract"].dropna().unique()))
                 if "Contract" in feature_names
@@ -247,6 +295,7 @@ def render_prediction(data: pd.DataFrame) -> None:
                     min_value=0.0,
                     value=float(data["MonthlyCharges"].median()),
                     step=1.0,
+                    help="Expected recurring monthly charge in dollars.",
                 )
                 if "MonthlyCharges" in feature_names
                 else None
@@ -259,6 +308,10 @@ def render_prediction(data: pd.DataFrame) -> None:
                         pd.to_numeric(data["TotalCharges"], errors="coerce").median()
                     ),
                     step=10.0,
+                    help=(
+                        "Historical amount charged so far. It is not forced to equal "
+                        "tenure multiplied by monthly charges."
+                    ),
                 )
                 if "TotalCharges" in feature_names
                 else None
@@ -285,11 +338,11 @@ def render_prediction(data: pd.DataFrame) -> None:
 def render_model_info() -> None:
     try:
         model, label = get_model()
-        st.sidebar.caption(f"Loaded artifact: {label}")
+        st.sidebar.caption(f"Model: {label}")
         probability_status = (
             "available" if hasattr(model, "predict_proba") else "unavailable"
         )
-        st.sidebar.caption(f"Probability estimates: {probability_status}")
+        st.sidebar.caption(f"Churn probability: {probability_status}")
     except (FileNotFoundError, ValueError, OSError) as error:
         st.sidebar.warning(str(error))
 

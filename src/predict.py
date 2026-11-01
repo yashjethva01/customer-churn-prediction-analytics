@@ -11,14 +11,28 @@ from src.compare_models import BEST_MODEL_PATH
 from src.train import MODEL_PATH
 
 
+def _algorithm_label(model: Pipeline) -> str:
+    """Return a friendly algorithm name from the fitted classifier."""
+    classifier = model.named_steps.get("classifier")
+    algorithm_names = {
+        "LogisticRegression": "Logistic Regression",
+        "DecisionTreeClassifier": "Decision Tree",
+        "RandomForestClassifier": "Random Forest",
+    }
+    return algorithm_names.get(
+        type(classifier).__name__,
+        "Churn prediction model",
+    )
+
+
 def load_compatible_model() -> tuple[Pipeline, str]:
-    """Load the preferred selected model, falling back to the Milestone 4 model."""
+    """Load a compatible model and report its verified algorithm name."""
     candidates = [
-        (BEST_MODEL_PATH, "Milestone 5 selected model"),
-        (MODEL_PATH, "Milestone 4 Logistic Regression model"),
+        BEST_MODEL_PATH,
+        MODEL_PATH,
     ]
     errors: list[str] = []
-    for path, label in candidates:
+    for path in candidates:
         if not path.is_file():
             errors.append(f"{path} does not exist")
             continue
@@ -27,7 +41,7 @@ def load_compatible_model() -> tuple[Pipeline, str]:
             feature_names = getattr(model.named_steps["preprocessor"], "feature_names_in_")
             if "customerID" in feature_names or "Churn" in feature_names:
                 raise ValueError("artifact expects an identifier or target as an input")
-            return model, f"{label} ({path.name})"
+            return model, _algorithm_label(model)
         except (
             AttributeError,
             EOFError,
